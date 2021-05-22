@@ -1,0 +1,59 @@
+version: '2'
+services:
+
+  # Shared container
+  mysql:
+    image: mysql:5.7.12
+    command: mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci
+    volumes:
+      - data-mysql:/var/lib/mysql
+    ports:
+      - "13306:3306"
+    environment:
+      MYSQL_DATABASE: app
+      MYSQL_USER: root
+      MYSQL_ROOT_PASSWORD: root@secret123
+  redis:
+    build: ./redis
+    volumes:
+      - data-redis:/var/lib/redis
+  workspace:
+    build: ./workspace
+    volumes:
+      - ../../cm_api:/var/www/laravel/cm_api # Knavi
+    command: /bin/bash
+    tty: true
+    depends_on:
+      - mysql
+      - redis
+
+  # Knavi API
+  php-fpm:
+    build:
+      context: ./php-fpm
+      dockerfile: Dockerfile-72
+    volumes:
+      - ../../cm_api:/var/www/laravel
+    depends_on:
+      - workspace
+      - mysql
+      - redis
+    environment:
+      PHP_IDE_CONFIG: "serverName=Docker"
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    volumes:
+      - ../../cm_api/storage/logs:/var/log/nginx
+      - ../../cm_api:/var/www/laravel
+    ports:
+      - "9081:80"
+    links:
+      - php-fpm
+
+volumes:
+  data-mysql:
+    driver: local
+  data-redis:
+    driver: local

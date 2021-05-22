@@ -1,0 +1,72 @@
+#!/bin/sh
+
+# set open command.
+case "$OSTYPE" in
+   cygwin*)
+      alias open="cmd /c start"
+      ;;
+   linux*)
+      alias open="xdg-open"
+      ;;
+esac
+
+usage() {
+    cat <<HELP
+NAME:
+   $0 -- {one sentence description}
+
+SYNOPSIS:
+  $0 [-h|--help]
+  $0 [--verbose]
+
+DESCRIPTION:
+   {description here}
+
+  -h  --help      Print this help.
+      --verbose   Enables verbose mode.
+
+EXAMPLE:
+  {examples if any}
+
+HELP
+}
+
+main() {
+    SCRIPT_DIR="$(cd $(dirname "$0"); pwd)"
+    DEV=$0
+    [ -f .env ] || cp .env.dev .env
+    for ARG; do
+        case "$ARG" in
+            --help) shift;usage; exit 0;;
+            --verbose) shift;set -x;;
+            --) shift;break;;
+            -*)
+                shift;
+                OPTIND=1
+                while getopts h OPT "$ARG"; do
+                    case "$OPT" in
+                        h) usage; exit 0;;
+                    esac
+                done
+                ;;
+            *) break;;
+        esac
+    done
+    case "$1" in
+        open)
+            shift;
+            case "$1" in
+                swagger-edit) service=swagger-editor;port=8080;;
+                swagger-ui) service=swagger-ui; port=80;;
+                *) service=nginx; port=80;;
+            esac
+
+            $DEV up -d &&\
+            ${OPEN_URL:-open} "http://$(docker-compose -f laradock/docker-compose.yml port $service $port)"
+            ;;
+        composer|phpunit|node|npm) $DEV run workspace $@;;
+        *) docker-compose -f laradock/docker-compose.yml $@;;
+    esac
+}
+
+main "$@"
