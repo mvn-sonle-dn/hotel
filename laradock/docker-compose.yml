@@ -48,7 +48,7 @@ services:
       - ../../cm_api/storage/logs:/var/log/nginx
       - ../../cm_api:/var/www/laravel
     ports:
-      - "9081:80"
+      - "80:80"
     links:
       - php-fpm
 
